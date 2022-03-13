@@ -218,15 +218,26 @@ def detect_objects(input_bev_maps, model, configs):
     objects = [] 
 
     ## step 1 : check whether there are any detections
+    if len(detections) > 0:
 
         ## step 2 : loop over all detections
-        
+        for det in detections:
+
             ## step 3 : perform the conversion using the limits for x, y and z set in the configs structure
+            score, _x, _y, _z, _h, _w, _l, _yaw = det
+            yaw = -_yaw
+            x = _y / configs.bev_height * (configs.lim_x[1] - configs.lim_x[0]) + configs.lim_x[0]
+            y = _x / configs.bev_width * (configs.lim_y[1] - configs.lim_y[0]) + configs.lim_y[0]
+            z = _z + configs.lim_z[0]
+            h = _h
+            w = _w / configs.bev_width * (configs.lim_y[1] - configs.lim_y[0])
+            l = _l / configs.bev_height * (configs.lim_x[1] - configs.lim_x[0])
         
             ## step 4 : append the current object to the 'objects' array
+            objects.append([1, x, y, z, h, w, l, yaw])
         
     #######
-    ####### ID_S3_EX2 START #######   
+    ####### ID_S3_EX2 END #######
     
     return objects    
 
