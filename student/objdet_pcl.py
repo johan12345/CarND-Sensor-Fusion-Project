@@ -152,7 +152,7 @@ def bev_from_pcl(lidar_pcl, configs):
     print("student task ID_S2_EX2")
 
     ## step 1 : create a numpy array filled with zeros which has the same dimensions as the BEV map
-    intensity_map = np.zeros((configs.bev_height, configs.bev_width), dtype=np.uint8)
+    intensity_map = np.zeros((configs.bev_height, configs.bev_width))
 
     # step 2 : re-arrange elements in lidar_pcl_cpy by sorting first by x, then y, then -intensity (use numpy.lexsort)
     # NOTE: this differs from the original task, which requested to sort by -z. However this does not make sense
@@ -167,9 +167,8 @@ def bev_from_pcl(lidar_pcl, configs):
     ## step 4 : assign the intensity value of each unique entry in lidar_top_pcl to the intensity map 
     ##          make sure that the intensity is scaled in such a way that objects of interest (e.g. vehicles) are clearly visible    
     ##          also, make sure that the influence of outliers is mitigated by normalizing intensity on the difference between the max. and min. value within the point cloud
-    pctls = np.percentile(bev_pcl_intensity[:, 3], [2, 98])
-    bev_pcl_intensity[:, 3] = (bev_pcl_intensity[:, 3] - pctls[0]) / (pctls[1] - pctls[0]) * 255
-    intensity_map[bev_pcl_intensity[:, 0].astype(int), bev_pcl_intensity[:, 1].astype(int)] = bev_pcl_intensity[:, 3].astype(np.uint8)
+    bev_pcl_intensity[:, 3] = np.clip(bev_pcl_intensity[:, 3], 0, 1)
+    intensity_map[bev_pcl_intensity[:, 0].astype(int), bev_pcl_intensity[:, 1].astype(int)] = bev_pcl_intensity[:, 3]
 
     ## step 5 : temporarily visualize the intensity map using OpenCV to make sure that vehicles separate well from the background
     # cv2.imshow('intensity map', intensity_map)
@@ -185,7 +184,7 @@ def bev_from_pcl(lidar_pcl, configs):
     print("student task ID_S2_EX3")
 
     ## step 1 : create a numpy array filled with zeros which has the same dimensions as the BEV map
-    height_map = np.zeros((configs.bev_height, configs.bev_width), dtype=np.uint8)
+    height_map = np.zeros((configs.bev_height, configs.bev_width))
 
     # step 2 : re-arrange elements in lidar_pcl_cpy by sorting first by x, then y, then -z (use numpy.lexsort)
     order = np.lexsort([bev_pcl[:, 0], bev_pcl[:, 1], -bev_pcl[:, 2]])
@@ -199,8 +198,8 @@ def bev_from_pcl(lidar_pcl, configs):
     ## step 4 : assign the height value of each unique entry in lidar_top_pcl to the height map
     ##          make sure that each entry is normalized on the difference between the upper and lower height defined in the config file
     ##          use the lidar_pcl_top data structure from the previous task to access the pixels of the height_map
-    lidar_pcl_top[:, 2] = (lidar_pcl_top[:, 2] - configs.lim_z[0]) / (configs.lim_z[1] - configs.lim_z[0]) * 255
-    height_map[lidar_pcl_top[:, 0].astype(int), lidar_pcl_top[:, 1].astype(int)] = lidar_pcl_top[:, 2].astype(np.uint8)
+    lidar_pcl_top[:, 2] = (lidar_pcl_top[:, 2] - configs.lim_z[0]) / (configs.lim_z[1] - configs.lim_z[0])
+    height_map[lidar_pcl_top[:, 0].astype(int), lidar_pcl_top[:, 1].astype(int)] = lidar_pcl_top[:, 2]
 
     ## step 3 : temporarily visualize the height map using OpenCV to make sure that vehicles separate well from the background
     # cv2.imshow('height map', height_map)
