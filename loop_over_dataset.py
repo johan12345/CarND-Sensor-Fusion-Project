@@ -239,10 +239,10 @@ while True:
                 track.set_t((cnt_frame - 1)*0.1) # save next timestamp
                 
             # associate all lidar measurements to all tracks
-            association.associate_and_update(manager, meas_list_lidar, KF)
+            association.associate_and_update(manager, meas_list_lidar, KF, lidar)
             
             # associate all camera measurements to all tracks
-            association.associate_and_update(manager, meas_list_cam, KF)
+            association.associate_and_update(manager, meas_list_cam, KF, camera)
             
             # save results for evaluation
             result_dict = {}

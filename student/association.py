@@ -119,7 +119,7 @@ class Association:
         # END student code
         ############ 
     
-    def associate_and_update(self, manager, meas_list, KF):
+    def associate_and_update(self, manager, meas_list, KF, sensor):
         # associate measurements and tracks
         self.associate(manager.track_list, meas_list, KF)
     
@@ -148,7 +148,7 @@ class Association:
             manager.track_list[ind_track] = track
             
         # run track management 
-        manager.manage_tracks(self.unassigned_tracks, self.unassigned_meas, meas_list)
+        manager.manage_tracks(self.unassigned_tracks, self.unassigned_meas, meas_list, sensor)
         
         for track in manager.track_list:            
             print('track', track.id, 'score =', track.score)

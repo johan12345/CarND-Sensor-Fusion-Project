@@ -101,7 +101,7 @@ class Trackmanagement:
         self.last_id = -1
         self.result_list = []
         
-    def manage_tracks(self, unassigned_tracks, unassigned_meas, meas_list):  
+    def manage_tracks(self, unassigned_tracks, unassigned_meas, meas_list, sensor):
         ############
         # TODO Step 2: implement track management:
         # - decrease the track score for unassigned tracks
@@ -113,16 +113,9 @@ class Trackmanagement:
         for i in unassigned_tracks:
             track = self.track_list[i]
             # check visibility
-
-            # NOTE: this does not work if there are no measurements, because in this case we do not have
-            # access to the sensor object to check whether the track is in the FOV.
-            # This could be changed if I update the code so that the current sensor is passed to the manage_tracks
-            # method, however it seems that there are no camera detections in this example, so the track would be
-            # deleted immediately.
-            if meas_list: # if not empty
-                if meas_list[0].sensor.in_fov(track.x):
-                    # your code goes here
-                    track.score -= 1/params.window
+            if sensor.in_fov(track.x):
+                # your code goes here
+                track.score -= 1/params.window
 
         # delete old tracks
         for track in self.track_list:
