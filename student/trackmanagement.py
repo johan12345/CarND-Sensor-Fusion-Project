@@ -11,12 +11,17 @@
 #
 
 # imports
+from typing import List
+
 import numpy as np
 import collections
 
 # add project directory to python path to enable relative imports
 import os
 import sys
+
+from student.measurements import Measurement
+
 PACKAGE_PARENT = '..'
 SCRIPT_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__))))
 sys.path.append(os.path.normpath(os.path.join(SCRIPT_DIR, PACKAGE_PARENT)))
@@ -24,7 +29,7 @@ import misc.params as params
 
 class Track:
     '''Track class with state, covariance, id, score'''
-    def __init__(self, meas, id):
+    def __init__(self, meas: Measurement, id):
         print('creating track no.', id)
         M_rot = meas.sensor.sens_to_veh[0:3, 0:3] # rotation matrix from sensor to vehicle coordinates
         
@@ -35,20 +40,24 @@ class Track:
         # - initialize track state and track score with appropriate values
         ############
 
-        self.x = np.matrix([[49.53980697],
-                        [ 3.41006279],
-                        [ 0.91790581],
-                        [ 0.        ],
-                        [ 0.        ],
-                        [ 0.        ]])
-        self.P = np.matrix([[9.0e-02, 0.0e+00, 0.0e+00, 0.0e+00, 0.0e+00, 0.0e+00],
-                        [0.0e+00, 9.0e-02, 0.0e+00, 0.0e+00, 0.0e+00, 0.0e+00],
-                        [0.0e+00, 0.0e+00, 6.4e-03, 0.0e+00, 0.0e+00, 0.0e+00],
-                        [0.0e+00, 0.0e+00, 0.0e+00, 2.5e+03, 0.0e+00, 0.0e+00],
-                        [0.0e+00, 0.0e+00, 0.0e+00, 0.0e+00, 2.5e+03, 0.0e+00],
-                        [0.0e+00, 0.0e+00, 0.0e+00, 0.0e+00, 0.0e+00, 2.5e+01]])
-        self.state = 'confirmed'
-        self.score = 0
+        # trasform measured position to vehicle coordinates
+        pos_sens = np.ones((4, 1))
+        pos_sens[0:3] = meas.z[0:3]
+        pos_veh = meas.sensor.sens_to_veh * pos_sens
+
+        # transform measurement covariance to vehicle coordinates
+        M_rot = meas.sensor.sens_to_veh[0:3, 0:3]
+        P_pos = M_rot * meas.R * M_rot.T
+        P_vel = np.diag([params.sigma_p44 ** 2, params.sigma_p55 ** 2, params.sigma_p66 ** 2])
+
+        self.x = np.zeros((params.dim_state, 1))
+        self.x[0:3] = pos_veh[0:3]
+        self.P = np.zeros((params.dim_state, params.dim_state))
+        self.P[0:3, 0:3] = P_pos
+        self.P[3:6, 3:6] = P_vel
+
+        self.state = 'initialized'
+        self.score = 1 / params.window
         
         ############
         # END student code
@@ -88,7 +97,7 @@ class Trackmanagement:
     '''Track manager with logic for initializing and deleting objects'''
     def __init__(self):
         self.N = 0 # current number of tracks
-        self.track_list = []
+        self.track_list: List[Track] = []
         self.last_id = -1
         self.result_list = []
         
@@ -103,13 +112,24 @@ class Trackmanagement:
         # decrease score for unassigned tracks
         for i in unassigned_tracks:
             track = self.track_list[i]
-            # check visibility    
+            # check visibility
+
+            # NOTE: this does not work if there are no measurements, because in this case we do not have
+            # access to the sensor object to check whether the track is in the FOV.
+            # This could be changed if I update the code so that the current sensor is passed to the manage_tracks
+            # method, however it seems that there are no camera detections in this example, so the track would be
+            # deleted immediately.
             if meas_list: # if not empty
                 if meas_list[0].sensor.in_fov(track.x):
                     # your code goes here
-                    pass 
+                    track.score -= 1/params.window
 
-        # delete old tracks   
+        # delete old tracks
+        for track in self.track_list:
+            if track.state == 'confirmed' and track.score < params.delete_threshold or \
+                track.score < params.delete_threshold_tentative or \
+                    (track.P.diagonal()[:2] > params.max_P).any():
+                self.delete_track(track)
 
         ############
         # END student code
@@ -140,7 +160,11 @@ class Trackmanagement:
         # - set track state to 'tentative' or 'confirmed'
         ############
 
-        pass
+        track.score += 1/params.window
+        if track.score >= params.confirmed_threshold:
+            track.state = "confirmed"
+        else:
+            track.state = "tentative"
         
         ############
         # END student code
